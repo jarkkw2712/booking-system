@@ -15,3 +15,20 @@ counter / 1234
 island / 1234
 boat / 1234
 manager / 1234
+
+
+Phase 2 added:
+- database/schema.sql
+- database/seed.sql
+- database/rls.sql
+- docs/PHASE2_DATABASE_SETUP.md
+- docs/LOCALSTORAGE_TO_DATABASE_MAPPING.md
+- dataService.js scaffold
+
+
+Phase 2B added:
+- supabase-config.js
+- dataService.js
+- database/rpc.sql
+- migrationTool.js
+- docs/PHASE2B_SUPABASE_ADAPTER_SETUP.md

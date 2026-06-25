@@ -50,3 +50,11 @@ Phase 2D added:
 - docs/PHASE2D_AUTH_PERMISSIONS_MASTERDATA.md
 
 Phase 2 is now complete as a scaffold.
+
+
+V2.16 Debug added:
+- Test Supabase Connection button
+- DataService.testConnection()
+- console logs for Supabase save
+- fixed current_app_user_id fallback in database/rpc.sql
+- docs/SUPABASE_DEBUG_CHECKLIST.md

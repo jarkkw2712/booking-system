@@ -200,3 +200,19 @@ function buildHtmlTable(rows) {
     </table>
   `;
 }
+
+
+async function testSupabaseConnection() {
+  try {
+    if (typeof DataService === "undefined") {
+      alert("ไม่พบ DataService");
+      return;
+    }
+    const result = await DataService.testConnection();
+    console.log("Supabase connection test:", result);
+    alert("ผล Test Supabase อยู่ใน Console แล้ว\n\n" + JSON.stringify(result, null, 2));
+  } catch (error) {
+    console.error(error);
+    alert("Test Supabase ไม่สำเร็จ: " + error.message);
+  }
+}

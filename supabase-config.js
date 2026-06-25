@@ -16,8 +16,8 @@ const APP_CONFIG = {
   DATA_MODE: "localStorage", // "localStorage" หรือ "supabase"
   AUTH_MODE: "mock",         // "mock" หรือ "supabase"
 
-  SUPABASE_URL: "https://iythuzkmjjshwciooaum.supabase.co/rest/v1/",
-  SUPABASE_ANON_KEY: "sb_publishable_V_QQDl9kHznfK596KOQXjg_gcvran3W"
+  SUPABASE_URL: "https://YOUR_PROJECT_ID.supabase.co",
+  SUPABASE_ANON_KEY: "YOUR_SUPABASE_ANON_OR_PUBLISHABLE_KEY"
 };
 
 function getSupabaseClient() {

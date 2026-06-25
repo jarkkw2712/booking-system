@@ -10,12 +10,33 @@
 
 create or replace function current_app_user_id()
 returns uuid as $$
-  select user_id
+declare
+  v_uid uuid;
+  v_user_id uuid;
+begin
+  v_uid := auth.uid();
+
+  if v_uid is not null then
+    select user_id into v_user_id
+    from app_users
+    where auth_user_id = v_uid
+    limit 1;
+
+    if v_user_id is not null then
+      return v_user_id;
+    end if;
+  end if;
+
+  -- mock login / prototype fallback
+  select user_id into v_user_id
   from app_users
-  where auth_user_id = auth.uid()
-     or username = coalesce(current_setting('request.jwt.claims', true)::jsonb ->> 'email', '')
+  where username in ('admin', 'admin@yourcompany.com')
+  order by username
   limit 1;
-$$ language sql stable security definer;
+
+  return v_user_id;
+end;
+$$ language plpgsql stable security definer;
 
 -- =========================================================
 -- RPC: list_bookings_json

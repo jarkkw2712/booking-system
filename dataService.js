@@ -47,11 +47,18 @@ const DataService = {
     }
 
     const supabase = this.client();
+    console.log("[DataService] Saving booking to Supabase", booking);
+
     const { data, error } = await supabase.rpc("upsert_booking_from_json", {
       p_booking: booking
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error("[DataService] Supabase save error", error);
+      throw error;
+    }
+
+    console.log("[DataService] Supabase save result", data);
     return data;
   },
 
@@ -64,11 +71,18 @@ const DataService = {
     }
 
     const supabase = this.client();
+    console.log("[DataService] Saving booking to Supabase", booking);
+
     const { data, error } = await supabase.rpc("upsert_booking_from_json", {
       p_booking: booking
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error("[DataService] Supabase save error", error);
+      throw error;
+    }
+
+    console.log("[DataService] Supabase save result", data);
     return data;
   },
 
@@ -260,5 +274,25 @@ const DataService = {
     }
 
     return true;
+  },
+  async testConnection() {
+    if (this.mode() !== "supabase") {
+      return { ok: false, mode: this.mode(), message: "DATA_MODE ยังไม่ใช่ supabase" };
+    }
+
+    const supabase = this.client();
+    const result = { ok: true, mode: this.mode(), checks: {} };
+
+    for (const table of ["master_programs", "bookings", "passengers", "audit_logs"]) {
+      const { data, error } = await supabase.from(table).select("*").limit(1);
+      result.checks[table] = error ? { ok: false, error: error.message } : { ok: true, rowsReturned: data.length };
+    }
+
+    const rpcResult = await supabase.rpc("list_bookings_json");
+    result.checks.rpc_list_bookings_json = rpcResult.error
+      ? { ok: false, error: rpcResult.error.message }
+      : { ok: true, rowsReturned: (rpcResult.data || []).length };
+
+    return result;
   }
 };

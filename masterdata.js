@@ -72,16 +72,23 @@ function resetMasterData() {
   alert("Reset Master Data แล้ว");
 }
 
-function renderMasterDataForm() {
-  const md = getMasterData();
+async function renderMasterDataForm() {
   const root = document.getElementById("masterDataForm");
   if (!root) return;
+
+  let md;
+  try {
+    md = (typeof DataService !== "undefined") ? await DataService.getMasterData() : getMasterData();
+  } catch (error) {
+    console.warn(error);
+    md = getMasterData();
+  }
 
   root.innerHTML = `
     <h2>Program</h2>
     ${md.programs.map((p, i) => `
       <div class="form-grid">
-        <div><label>ชื่อ</label><input id="program_name_${i}" value="${p.name}"></div>
+        <div><label>ชื่อ</label><input id="program_id_${i}" type="hidden" value="${p.id}"><input id="program_name_${i}" value="${p.name}"></div>
         <div><label>ราคา</label><input id="program_price_${i}" type="number" value="${p.price}"></div>
       </div>
     `).join("")}
@@ -90,7 +97,76 @@ function renderMasterDataForm() {
     <p class="muted">เมนูนี้ใช้ร่วมกันทั้ง Pre Add-on และซื้อเพิ่มบนเกาะ</p>
     ${md.addOns.map((a, i) => `
       <div class="form-grid">
-        <div><label>ชื่อ</label><input id="addon_name_${i}" value="${a.name}"></div>
+        <div><label>ชื่อ</label><input id="addon_id_${i}" type="hidden" value="${a.id}"><input id="addon_name_${i}" value="${a.name}"></div>
+        <div><label>ราคา</label><input id="addon_price_${i}" type="number" value="${a.defaultPrice}"></div>
+      </div>
+    `).join("")}
+  `;
+}
+
+async function saveMasterDataFromForm() {
+  if (typeof requirePermission === 'function' && !requirePermission('editMasterData', 'เฉพาะ Admin เท่านั้นที่แก้ Master Data ได้')) return;
+
+  const current = (typeof DataService !== "undefined") ? await DataService.getMasterData() : getMasterData();
+
+  const md = {
+    programs: current.programs.map((p, i) => ({
+      ...p,
+      id: document.getElementById(`program_id_${i}`)?.value || p.id,
+      name: document.getElementById(`program_name_${i}`).value,
+      price: Number(document.getElementById(`program_price_${i}`).value || 0)
+    })),
+    addOns: current.addOns.map((a, i) => ({
+      ...a,
+      id: document.getElementById(`addon_id_${i}`)?.value || a.id,
+      name: document.getElementById(`addon_name_${i}`).value,
+      defaultPrice: Number(document.getElementById(`addon_price_${i}`).value || 0)
+    }))
+  };
+
+  if (typeof DataService !== "undefined") {
+    await DataService.saveMasterData(md);
+  } else {
+    saveMasterData(md);
+  }
+
+  localStorage.setItem("master_data", JSON.stringify(md));
+  alert("บันทึก Master Data แล้ว");
+}
+
+function resetMasterData() {
+  if (typeof requirePermission === 'function' && !requirePermission('editMasterData', 'เฉพาะ Admin เท่านั้นที่ reset Master Data ได้')) return;
+  localStorage.setItem("master_data", JSON.stringify(DEFAULT_MASTER_DATA));
+  renderMasterDataForm();
+  alert("Reset Master Data แล้ว");
+}
+
+async function renderMasterDataForm() {
+  const root = document.getElementById("masterDataForm");
+  if (!root) return;
+
+  let md;
+  try {
+    md = (typeof DataService !== "undefined") ? await DataService.getMasterData() : getMasterData();
+  } catch (error) {
+    console.warn(error);
+    md = getMasterData();
+  }
+
+  root.innerHTML = `
+    <h2>Program</h2>
+    ${md.programs.map((p, i) => `
+      <div class="form-grid">
+        <div><label>ชื่อ</label><input id="program_id_${i}" type="hidden" value="${p.id}"><input id="program_name_${i}" value="${p.name}"></div>
+        <div><label>ราคา</label><input id="program_price_${i}" type="number" value="${p.price}"></div>
+      </div>
+    `).join("")}
+
+    <h2 class="mt">Add-on Master</h2>
+    <p class="muted">เมนูนี้ใช้ร่วมกันทั้ง Pre Add-on และซื้อเพิ่มบนเกาะ</p>
+    ${md.addOns.map((a, i) => `
+      <div class="form-grid">
+        <div><label>ชื่อ</label><input id="addon_id_${i}" type="hidden" value="${a.id}"><input id="addon_name_${i}" value="${a.name}"></div>
         <div><label>ราคา</label><input id="addon_price_${i}" type="number" value="${a.defaultPrice}"></div>
       </div>
     `).join("")}

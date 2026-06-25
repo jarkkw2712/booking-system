@@ -24,37 +24,27 @@ function getCurrentUser() {
   return JSON.parse(localStorage.getItem("current_user") || "null");
 }
 
-function login() {
+async function login() {
   const username = document.getElementById("loginUsername").value.trim();
   const password = document.getElementById("loginPassword").value;
   const error = document.getElementById("loginError");
 
-  const user = AUTH_USERS.find(u => u.username === username && u.password === password);
-
-  if (!user) {
-    error.innerText = "Username หรือ Password ไม่ถูกต้อง";
+  try {
+    const user = await AuthService.login(username, password);
+    writeAuthAudit("LOGIN", `${user.displayName} login`);
+    await loadRolePermissionsFromDataService();
+    applyAuthUI();
+    applyRoleUI();
+  } catch (err) {
+    error.innerText = err.message || "Login ไม่สำเร็จ";
     error.style.display = "block";
-    return;
   }
-
-  localStorage.setItem("current_user", JSON.stringify({
-    username: user.username,
-    role: user.role,
-    displayName: user.displayName,
-    loginAt: new Date().toISOString()
-  }));
-  localStorage.setItem("current_role", user.role);
-
-  writeAuthAudit("LOGIN", `${user.displayName} login`);
-  applyAuthUI();
-  applyRoleUI();
 }
 
-function logout() {
+async function logout() {
   const user = getCurrentUser();
   if (user) writeAuthAudit("LOGOUT", `${user.displayName} logout`);
-  localStorage.removeItem("current_user");
-  localStorage.removeItem("current_role");
+  await AuthService.logout();
   applyAuthUI();
 }
 
@@ -195,6 +185,29 @@ const DEFAULT_ROLE_PERMISSIONS = {
   }
 };
 
+
+async function loadRolePermissionsFromDataService() {
+  if (typeof DataService === "undefined") return;
+
+  try {
+    const perms = await DataService.getRolePermissions();
+    if (perms) {
+      const current = deepClone(DEFAULT_ROLE_PERMISSIONS);
+
+      Object.keys(perms).forEach(role => {
+        if (!current[role]) current[role] = {};
+        Object.keys(perms[role]).forEach(key => {
+          if (key !== "label") current[role][key] = perms[role][key];
+        });
+      });
+
+      localStorage.setItem("role_permissions", JSON.stringify(current));
+    }
+  } catch (error) {
+    console.warn("Cannot load role permissions from DataService", error);
+  }
+}
+
 function getRolePermissions() {
   const saved = localStorage.getItem("role_permissions");
   if (!saved) {
@@ -225,37 +238,27 @@ function getCurrentUser() {
   return JSON.parse(localStorage.getItem("current_user") || "null");
 }
 
-function login() {
+async function login() {
   const username = document.getElementById("loginUsername").value.trim();
   const password = document.getElementById("loginPassword").value;
   const error = document.getElementById("loginError");
 
-  const user = AUTH_USERS.find(u => u.username === username && u.password === password);
-
-  if (!user) {
-    error.innerText = "Username หรือ Password ไม่ถูกต้อง";
+  try {
+    const user = await AuthService.login(username, password);
+    writeAuthAudit("LOGIN", `${user.displayName} login`);
+    await loadRolePermissionsFromDataService();
+    applyAuthUI();
+    applyRoleUI();
+  } catch (err) {
+    error.innerText = err.message || "Login ไม่สำเร็จ";
     error.style.display = "block";
-    return;
   }
-
-  localStorage.setItem("current_user", JSON.stringify({
-    username: user.username,
-    role: user.role,
-    displayName: user.displayName,
-    loginAt: new Date().toISOString()
-  }));
-  localStorage.setItem("current_role", user.role);
-
-  writeAuthAudit("LOGIN", `${user.displayName} login`);
-  applyAuthUI();
-  applyRoleUI();
 }
 
-function logout() {
+async function logout() {
   const user = getCurrentUser();
   if (user) writeAuthAudit("LOGOUT", `${user.displayName} logout`);
-  localStorage.removeItem("current_user");
-  localStorage.removeItem("current_role");
+  await AuthService.logout();
   applyAuthUI();
 }
 
@@ -444,6 +447,7 @@ function applyRoleUI() {
 }
 
 
+let bookingCache = [];
 let passengers = [];
 let currentBooking = null;
 let editingBookingCode = null;
@@ -497,11 +501,67 @@ function leaderFullName() {
   ].filter(Boolean).join(" ");
 }
 
+
+async function loadBookingCache() {
+  try {
+    if (typeof DataService !== "undefined") {
+      bookingCache = await DataService.listBookings();
+    } else {
+      bookingCache = JSON.parse(localStorage.getItem("bookings") || "[]");
+    }
+    return bookingCache;
+  } catch (error) {
+    console.error(error);
+    alert("โหลดข้อมูล Booking ไม่สำเร็จ: " + error.message);
+    bookingCache = JSON.parse(localStorage.getItem("bookings") || "[]");
+    return bookingCache;
+  }
+}
+
+async function persistNewBooking(booking) {
+  if (typeof DataService !== "undefined") {
+    return await DataService.saveBooking(booking);
+  }
+  const data = JSON.parse(localStorage.getItem("bookings") || "[]");
+  data.push(booking);
+  localStorage.setItem("bookings", JSON.stringify(data));
+  return booking;
+}
+
+async function persistUpdatedBooking(bookingCode, booking) {
+  if (typeof DataService !== "undefined") {
+    return await DataService.updateBooking(bookingCode, booking);
+  }
+  const data = JSON.parse(localStorage.getItem("bookings") || "[]")
+    .map(b => b.bookingCode === bookingCode ? booking : b);
+  localStorage.setItem("bookings", JSON.stringify(data));
+  return booking;
+}
+
+async function persistCancelBooking(bookingCode, reason) {
+  if (typeof DataService !== "undefined") {
+    return await DataService.cancelBooking(bookingCode, reason);
+  }
+  const data = JSON.parse(localStorage.getItem("bookings") || "[]")
+    .map(b => b.bookingCode === bookingCode ? {
+      ...b,
+      status: "cancelled",
+      cancelReason: reason,
+      cancelledAt: new Date().toISOString()
+    } : b);
+  localStorage.setItem("bookings", JSON.stringify(data));
+  return true;
+}
+
+
 function getBookings() {
-  return JSON.parse(localStorage.getItem("bookings") || "[]");
+  return bookingCache && bookingCache.length
+    ? bookingCache
+    : JSON.parse(localStorage.getItem("bookings") || "[]");
 }
 
 function setBookings(data) {
+  bookingCache = data;
   localStorage.setItem("bookings", JSON.stringify(data));
 }
 
@@ -572,12 +632,28 @@ function showPage(id) {
 
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
   document.getElementById(id).classList.add("active");
-  if (id === "managePage") renderManageBookings();
-  if (id === "printPage") renderPrintPage();
+  if (id === "managePage") {
+    awaitLoadAndRenderManage();
+  }
+  if (id === "printPage") {
+    awaitLoadAndRenderPrint();
+  }
   if (id === "settingPage") renderMasterDataForm();
   if (id === "permissionPage") renderPermissionMatrix();
   if (id === "systemPage" && typeof renderDataTables === "function") renderDataTables();
 }
+
+
+async function awaitLoadAndRenderManage() {
+  await loadBookingCache();
+  renderManageBookings();
+}
+
+async function awaitLoadAndRenderPrint() {
+  await loadBookingCache();
+  renderPrintPage();
+}
+
 
 function toggleReturnDate() {
   const isRoundTrip = document.getElementById("tripType").value === "round_trip";
@@ -1193,21 +1269,28 @@ function buildBooking() {
   };
 }
 
-function saveBooking() {
+async function saveBooking() {
   if (!requirePermission('createBooking', 'Role นี้ไม่มีสิทธิ์สร้าง Booking')) return;
   if (!validateBookingForm()) return;
-  currentBooking = buildBooking();
-  currentBooking.createdAt = new Date().toISOString();
-  const data = getBookings();
-  data.push(currentBooking);
-  setBookings(data);
-  editingBookingCode = currentBooking.bookingCode;
-  alert("บันทึก Booking ใหม่แล้ว ระบบเปลี่ยนเป็นโหมดแก้ไขแล้ว");
-  refreshSummary();
-  updateSaveMode();
+
+  try {
+    currentBooking = buildBooking();
+    currentBooking.createdAt = new Date().toISOString();
+
+    await persistNewBooking(currentBooking);
+    await loadBookingCache();
+
+    editingBookingCode = currentBooking.bookingCode;
+    alert("บันทึก Booking ใหม่แล้ว ระบบเปลี่ยนเป็นโหมดแก้ไขแล้ว");
+    refreshSummary();
+    updateSaveMode();
+  } catch (error) {
+    console.error(error);
+    alert("บันทึก Booking ไม่สำเร็จ: " + error.message);
+  }
 }
 
-function updateExistingBooking() {
+async function updateExistingBooking() {
   if (!validateBookingForm()) return;
   if (!can('editBooking') && !can('addIslandAddOn')) {
     alert('Role นี้ไม่มีสิทธิ์บันทึกการแก้ไข Booking');
@@ -1217,16 +1300,24 @@ function updateExistingBooking() {
     alert("ยังไม่ได้เลือก Booking มาแก้ไข");
     return;
   }
-  currentBooking = buildBooking();
-  setBookings(getBookings().map(b => b.bookingCode === editingBookingCode ? currentBooking : b));
-  writeAudit("UPDATE_BOOKING", "แก้ไข Booking และบันทึกทับ");
-  alert("บันทึกการแก้ไขแล้ว");
-  refreshSummary();
-  updateSaveMode();
+
+  try {
+    currentBooking = buildBooking();
+    await persistUpdatedBooking(editingBookingCode, currentBooking);
+    await loadBookingCache();
+
+    writeAudit("UPDATE_BOOKING", "แก้ไข Booking และบันทึกทับ");
+    alert("บันทึกการแก้ไขแล้ว");
+    refreshSummary();
+    updateSaveMode();
+  } catch (error) {
+    console.error(error);
+    alert("บันทึกการแก้ไขไม่สำเร็จ: " + error.message);
+  }
 }
 
 
-function cancelCurrentBooking() {
+async function cancelCurrentBooking() {
   if (!requirePermission("cancelBooking", "เฉพาะ Admin เท่านั้นที่ยกเลิก Booking ได้")) return;
   if (!editingBookingCode) {
     alert("ยังไม่ได้เลือก Booking ที่ต้องการยกเลิก");
@@ -1239,23 +1330,29 @@ function cancelCurrentBooking() {
     return;
   }
 
-  const booking = buildBooking();
-  booking.status = "cancelled";
-  booking.cancelReason = reason;
-  booking.cancelledAt = new Date().toISOString();
-  booking.cancelledByRole = getCurrentRole();
+  try {
+    const booking = buildBooking();
+    booking.status = "cancelled";
+    booking.cancelReason = reason;
+    booking.cancelledAt = new Date().toISOString();
+    booking.cancelledByRole = getCurrentRole();
 
-  setBookings(getBookings().map(b => b.bookingCode === editingBookingCode ? booking : b));
-  currentBooking = booking;
+    await persistCancelBooking(editingBookingCode, reason);
+    await loadBookingCache();
 
-  document.getElementById("status").value = "cancelled";
-  writeAudit("CANCEL_BOOKING", `ยกเลิก Booking เหตุผล: ${reason}`);
+    currentBooking = booking;
+    document.getElementById("status").value = "cancelled";
+    writeAudit("CANCEL_BOOKING", `ยกเลิก Booking เหตุผล: ${reason}`);
 
-  alert("ยกเลิก Booking แล้ว ข้อมูลจะยังอยู่ในระบบ แต่จะไม่ออก Report");
-  refreshSummary();
-  renderManageBookings();
-  renderPrintPage();
-  updateSaveMode();
+    alert("ยกเลิก Booking แล้ว ข้อมูลจะยังอยู่ในระบบ แต่จะไม่ออก Report");
+    refreshSummary();
+    renderManageBookings();
+    renderPrintPage();
+    updateSaveMode();
+  } catch (error) {
+    console.error(error);
+    alert("ยกเลิก Booking ไม่สำเร็จ: " + error.message);
+  }
 }
 
 
@@ -1392,7 +1489,7 @@ function renderPermissionMatrix() {
   `;
 }
 
-function savePermissionsFromForm() {
+async function savePermissionsFromForm() {
   if (!requirePermission("editPermissions", "Role นี้ไม่มีสิทธิ์กำหนดสิทธิ์")) return;
 
   const current = getRolePermissions();
@@ -1410,6 +1507,15 @@ function savePermissionsFromForm() {
   current.admin.editMasterData = true;
 
   saveRolePermissions(current);
+
+  if (typeof DataService !== "undefined" && DataService.mode && DataService.mode() === "supabase") {
+    for (const role of roles) {
+      for (const action of PERMISSION_ACTIONS) {
+        await DataService.saveRolePermission(role, action.key, current[role][action.key]);
+      }
+    }
+  }
+
   writeAudit("UPDATE_PERMISSIONS", "แก้ไขสิทธิ์ Role");
   alert("บันทึกสิทธิ์แล้ว");
   applyRoleUI();
@@ -1425,8 +1531,24 @@ function resetPermissions() {
 }
 
 
-generatePassengers();
-toggleReturnDate();
-applyAuthUI();
-applyRoleUI();
-updateSaveMode();
+
+async function initializeApp() {
+  try {
+    const user = await AuthService.getSessionUser();
+    if (user) {
+      await loadRolePermissionsFromDataService();
+    }
+  } catch (error) {
+    console.warn("Session restore failed", error);
+  }
+
+  generatePassengers();
+  toggleReturnDate();
+  applyAuthUI();
+  applyRoleUI();
+  updateSaveMode();
+  loadBookingCache();
+}
+
+
+initializeApp();

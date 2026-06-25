@@ -5,11 +5,11 @@ function requireSystemAdmin() {
   return true;
 }
 
-function getAllStorageData() {
+async function getAllStorageData() {
   return {
     exportedAt: new Date().toISOString(),
     appVersion: "dive-booking-v2-11-phase1",
-    bookings: JSON.parse(localStorage.getItem("bookings") || "[]"),
+    bookings: (typeof DataService !== "undefined" ? await DataService.listBookings() : JSON.parse(localStorage.getItem("bookings") || "[]")),
     audit_logs: JSON.parse(localStorage.getItem("audit_logs") || "[]"),
     master_data: JSON.parse(localStorage.getItem("master_data") || "null"),
     role_permissions: JSON.parse(localStorage.getItem("role_permissions") || "null"),
@@ -17,9 +17,9 @@ function getAllStorageData() {
   };
 }
 
-function exportBackup() {
+async function exportBackup() {
   if (!requireSystemAdmin()) return;
-  const data = getAllStorageData();
+  const data = await getAllStorageData();
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

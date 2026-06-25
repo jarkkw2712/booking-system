@@ -153,5 +153,112 @@ const DataService = {
 
     if (error) throw error;
     return data;
+  },
+// -------------------------
+  // Auth / Roles / Permissions
+  // -------------------------
+
+  async getRolePermissions() {
+    if (this.mode() === "localStorage") {
+      return JSON.parse(localStorage.getItem("role_permissions") || "null");
+    }
+
+    const supabase = this.client();
+    const { data, error } = await supabase
+      .from("role_permissions")
+      .select("role_id, permission_key, allowed");
+
+    if (error) throw error;
+
+    const result = {};
+    (data || []).forEach(row => {
+      if (!result[row.role_id]) result[row.role_id] = {};
+      result[row.role_id][row.permission_key] = row.allowed;
+    });
+
+    return result;
+  },
+
+  async saveRolePermission(roleId, permissionKey, allowed) {
+    if (this.mode() === "localStorage") {
+      const perms = JSON.parse(localStorage.getItem("role_permissions") || "{}");
+      if (!perms[roleId]) perms[roleId] = {};
+      perms[roleId][permissionKey] = allowed;
+      localStorage.setItem("role_permissions", JSON.stringify(perms));
+      return true;
+    }
+
+    const supabase = this.client();
+    const { data, error } = await supabase
+      .from("role_permissions")
+      .upsert({
+        role_id: roleId,
+        permission_key: permissionKey,
+        allowed,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: "role_id,permission_key"
+      });
+
+    if (error) throw error;
+    return data;
+  },
+
+  async getMasterData() {
+    if (this.mode() === "localStorage") {
+      return getMasterData();
+    }
+
+    const [programsResult, addOnsResult] = await Promise.all([
+      this.client().from("master_programs").select("*").eq("active_flag", true).order("sort_order"),
+      this.client().from("master_addons").select("*").eq("active_flag", true).order("sort_order")
+    ]);
+
+    if (programsResult.error) throw programsResult.error;
+    if (addOnsResult.error) throw addOnsResult.error;
+
+    return {
+      programs: (programsResult.data || []).map(p => ({
+        id: p.program_id,
+        name: p.program_name,
+        price: Number(p.default_price)
+      })),
+      addOns: (addOnsResult.data || []).map(a => ({
+        id: a.addon_id,
+        name: a.addon_name,
+        defaultPrice: Number(a.default_price)
+      }))
+    };
+  },
+
+  async saveMasterData(masterData) {
+    if (this.mode() === "localStorage") {
+      saveMasterData(masterData);
+      return true;
+    }
+
+    const supabase = this.client();
+
+    for (const p of masterData.programs || []) {
+      const { error } = await supabase.from("master_programs").upsert({
+        program_id: p.id,
+        program_name: p.name,
+        default_price: p.price,
+        active_flag: true
+      });
+      if (error) throw error;
+    }
+
+    for (const a of masterData.addOns || []) {
+      const { error } = await supabase.from("master_addons").upsert({
+        addon_id: a.id,
+        addon_name: a.name,
+        default_price: a.defaultPrice,
+        active_flag: true
+      });
+      if (error) throw error;
+    }
+
+    return true;
   }
 };

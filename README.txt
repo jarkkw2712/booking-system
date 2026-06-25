@@ -32,3 +32,21 @@ Phase 2B added:
 - database/rpc.sql
 - migrationTool.js
 - docs/PHASE2B_SUPABASE_ADAPTER_SETUP.md
+
+
+Phase 2C added:
+- booking save/update/cancel now call DataService adapter
+- manage/print list reload via adapter
+- backup export reads via adapter
+- docs/PHASE2C_DATA_SERVICE_CONNECTED.md
+
+
+Phase 2D added:
+- authService.js
+- Supabase Auth scaffold
+- role permission load/save through DataService
+- master data load/save through DataService
+- database/auth_setup.sql
+- docs/PHASE2D_AUTH_PERMISSIONS_MASTERDATA.md
+
+Phase 2 is now complete as a scaffold.

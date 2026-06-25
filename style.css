@@ -88,3 +88,9 @@ body.locked .layout{display:none}
 .permission-table th,.permission-table td{border:1px solid #dbe8ee;padding:8px;text-align:center}
 .permission-table th{background:#f4f8fb}
 .permission-table td:first-child{text-align:left;font-weight:800}
+
+.table-scroll{overflow:auto;margin-top:12px}
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th,.data-table td{border:1px solid #dbe8ee;padding:8px;vertical-align:top}
+.data-table th{background:#f4f8fb;position:sticky;top:0}
+.code-cell{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;max-width:360px}

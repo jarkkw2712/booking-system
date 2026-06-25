@@ -46,6 +46,7 @@
     <button onclick="showPage('printPage')">พิมพ์เอกสาร / Report</button>
     <button onclick="showPage('settingPage')">ตั้งค่า Master Data</button>
     <button onclick="showPage('permissionPage')">กำหนดสิทธิ์</button>
+    <button onclick="showPage('systemPage')">System Admin</button>
   </aside>
 
   <main class="content">
@@ -254,6 +255,49 @@
       </div>
     </section>
 
+
+    <section id="systemPage" class="page">
+      <h1>System Admin / Data Center</h1>
+
+      <div class="card">
+        <h2>Backup / Restore</h2>
+        <p class="muted">ใช้สำหรับทดสอบ prototype ก่อนย้ายไป database จริง</p>
+        <div class="three-grid">
+          <button class="btn btn-primary" onclick="exportBackup()">Export Backup JSON</button>
+          <button class="btn btn-soft" onclick="document.getElementById('importBackupFile').click()">Import Backup JSON</button>
+          <button class="btn btn-soft" onclick="renderDataTables()">Refresh Data Tables</button>
+        </div>
+        <input id="importBackupFile" type="file" accept=".json" style="display:none" onchange="importBackup(event)">
+      </div>
+
+      <div class="card">
+        <h2>Reset Data</h2>
+        <p class="muted">ล้างเฉพาะส่วนที่ต้องการ</p>
+        <div class="three-grid">
+          <button class="btn btn-danger" onclick="resetStorageKey('bookings')">Reset Bookings</button>
+          <button class="btn btn-danger" onclick="resetStorageKey('audit_logs')">Reset Audit Logs</button>
+          <button class="btn btn-warning" onclick="resetStorageKey('master_data')">Reset Master Data</button>
+          <button class="btn btn-warning" onclick="resetStorageKey('role_permissions')">Reset Permissions</button>
+          <button class="btn btn-soft" onclick="resetStorageKey('current_user')">Logout / Clear Session</button>
+          <button class="btn btn-danger" onclick="factoryReset()">Factory Reset ทั้งหมด</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Data Tables</h2>
+        <div class="three-grid">
+          <button class="btn btn-soft" onclick="showDataTable('bookings')">Bookings</button>
+          <button class="btn btn-soft" onclick="showDataTable('passengers')">Passengers</button>
+          <button class="btn btn-soft" onclick="showDataTable('addons')">Add-ons</button>
+          <button class="btn btn-soft" onclick="showDataTable('audit_logs')">Audit Logs</button>
+          <button class="btn btn-soft" onclick="showDataTable('master_data')">Master Data</button>
+          <button class="btn btn-soft" onclick="showDataTable('role_permissions')">Permissions</button>
+        </div>
+        <div id="dataTableInfo" class="muted mt"></div>
+        <div id="dataTableRoot" class="table-scroll"></div>
+      </div>
+    </section>
+
   </main>
 </div>
 
@@ -282,5 +326,6 @@
 <script src="masterdata.js"></script>
 <script src="booking.js"></script>
 <script src="report.js"></script>
+<script src="system.js"></script>
 </body>
 </html>

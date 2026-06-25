@@ -104,6 +104,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
     cancelBooking: true,
     editMasterData: true,
     editPermissions: true,
+    systemAdmin: true,
     addIslandAddOn: true,
     printReceipt: true,
     printCounterReport: true,
@@ -119,6 +120,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
     cancelBooking: false,
     editMasterData: false,
     editPermissions: false,
+    systemAdmin: false,
     addIslandAddOn: false,
     printReceipt: true,
     printCounterReport: true,
@@ -134,6 +136,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
     cancelBooking: false,
     editMasterData: false,
     editPermissions: false,
+    systemAdmin: false,
     addIslandAddOn: true,
     printReceipt: false,
     printCounterReport: false,
@@ -149,6 +152,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
     cancelBooking: false,
     editMasterData: false,
     editPermissions: false,
+    systemAdmin: false,
     addIslandAddOn: false,
     printReceipt: false,
     printCounterReport: false,
@@ -164,6 +168,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
     cancelBooking: false,
     editMasterData: false,
     editPermissions: false,
+    systemAdmin: false,
     addIslandAddOn: false,
     printReceipt: false,
     printCounterReport: true,
@@ -179,6 +184,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
     cancelBooking: false,
     editMasterData: false,
     editPermissions: false,
+    systemAdmin: false,
     addIslandAddOn: false,
     printReceipt: false,
     printCounterReport: false,
@@ -432,6 +438,9 @@ function applyRoleUI() {
 
   const permBtn = Array.from(document.querySelectorAll(".sidebar button")).find(b => b.textContent.includes("กำหนดสิทธิ์"));
   if (permBtn) permBtn.classList.toggle("no-access", !can("editPermissions"));
+
+  const systemBtn = Array.from(document.querySelectorAll(".sidebar button")).find(b => b.textContent.includes("System Admin"));
+  if (systemBtn) systemBtn.classList.toggle("no-access", !can("systemAdmin"));
 }
 
 
@@ -555,6 +564,7 @@ function startNewBooking() {
 function showPage(id) {
   if (id === "settingPage" && !requirePermission("editMasterData", "Role นี้ไม่มีสิทธิ์แก้ Master Data")) return;
   if (id === "permissionPage" && !requirePermission("editPermissions", "Role นี้ไม่มีสิทธิ์กำหนดสิทธิ์")) return;
+  if (id === "systemPage" && !requirePermission("systemAdmin", "Role นี้ไม่มีสิทธิ์เข้า System Admin")) return;
   if (id === "bookingPage" && !can("createBooking") && !can("editBooking") && !can("addIslandAddOn")) {
     alert("Role นี้ไม่มีสิทธิ์เข้าแก้ไข Booking");
     return;
@@ -566,6 +576,7 @@ function showPage(id) {
   if (id === "printPage") renderPrintPage();
   if (id === "settingPage") renderMasterDataForm();
   if (id === "permissionPage") renderPermissionMatrix();
+  if (id === "systemPage" && typeof renderDataTables === "function") renderDataTables();
 }
 
 function toggleReturnDate() {
@@ -1136,6 +1147,27 @@ function refreshSummary() {
   document.getElementById("grandTotal").innerText = money(grand);
 }
 
+
+function validateBookingForm() {
+  const errors = [];
+
+  if (!document.getElementById("travelDate").value) errors.push("กรุณาระบุวันเดินทางไป");
+  if (document.getElementById("tripType").value === "round_trip" && !document.getElementById("returnDate").value) errors.push("กรุณาระบุวันเดินทางกลับ");
+  if (!document.getElementById("leaderFirstName").value.trim()) errors.push("กรุณาระบุชื่อหัวหน้าทริป");
+  if (!document.getElementById("leaderLastName").value.trim()) errors.push("กรุณาระบุนามสกุลหัวหน้าทริป");
+  if (!passengers.length) errors.push("กรุณาสร้างรายชื่อผู้เดินทางอย่างน้อย 1 คน");
+
+  passengers.forEach((p, i) => {
+    if (!p.firstName || !p.lastName) errors.push(`ผู้เดินทางคนที่ ${i + 1} ยังไม่มีชื่อ/นามสกุล`);
+  });
+
+  if (errors.length) {
+    alert("ไม่สามารถบันทึกได้ กรุณาตรวจสอบ:\n\n" + errors.join("\n"));
+    return false;
+  }
+  return true;
+}
+
 function buildBooking() {
   return {
     bookingCode: editingBookingCode || "BK" + Date.now(),
@@ -1163,6 +1195,7 @@ function buildBooking() {
 
 function saveBooking() {
   if (!requirePermission('createBooking', 'Role นี้ไม่มีสิทธิ์สร้าง Booking')) return;
+  if (!validateBookingForm()) return;
   currentBooking = buildBooking();
   currentBooking.createdAt = new Date().toISOString();
   const data = getBookings();
@@ -1175,6 +1208,7 @@ function saveBooking() {
 }
 
 function updateExistingBooking() {
+  if (!validateBookingForm()) return;
   if (!can('editBooking') && !can('addIslandAddOn')) {
     alert('Role นี้ไม่มีสิทธิ์บันทึกการแก้ไข Booking');
     return;
@@ -1318,7 +1352,8 @@ const PERMISSION_ACTIONS = [
   { key: "viewAudit", label: "ดู Audit Log" },
   { key: "viewMoney", label: "เห็นยอดเงิน" },
   { key: "editMasterData", label: "แก้ Master Data" },
-  { key: "editPermissions", label: "กำหนดสิทธิ์" }
+  { key: "editPermissions", label: "กำหนดสิทธิ์" },
+  { key: "systemAdmin", label: "System Admin / Backup" }
 ];
 
 function renderPermissionMatrix() {

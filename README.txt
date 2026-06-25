@@ -1,13 +1,13 @@
-Dive Booking V2.10
+Dive Booking V2.11 Phase 1
 
-Fix:
-- เพิ่มหน้า “กำหนดสิทธิ์” ให้ Admin ปรับ permission ของแต่ละ Role ได้
-- สิทธิ์ถูกเก็บใน localStorage key: role_permissions
-- Island Staff default มีสิทธิ์:
-  - ซื้อเพิ่มบนเกาะ
-  - บันทึก/แก้ไข Booking เพื่อให้ island add-on ถูก update
-- ปรับ permissions ได้เองจากหน้า “กำหนดสิทธิ์”
-- Admin ยังถูกล็อกให้มีสิทธิ์กำหนดสิทธิ์เสมอ เพื่อกันเผลอปิดตัวเอง
+เพิ่ม:
+- System Admin / Data Center
+- Data Tables: bookings, passengers, add-ons, audit logs, master data, permissions
+- Export Backup JSON
+- Import Backup JSON
+- Reset เฉพาะส่วน
+- Factory Reset
+- Validation ก่อน Save
 
 บัญชีทดสอบ:
 admin / 1234
